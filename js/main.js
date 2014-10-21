@@ -1,21 +1,23 @@
 $(document).ready(function () {
 	
 	// Set up namespace for data to pass
-	localhost = {}; // global namspace
-	localhost.dateArray = [];
-	localhost.chart = {xAxisMin : null, xAxisMax : null}
-	localhost.data = {num_contributors : [], ip : [], fpu : [], civpol : [], eom : [], troops : [], all : []}
+	chartNS = {}; // global namspace
+	chartNS.dateArray = [];
+	chartNS.chart = {xAxisMin : null, xAxisMax : null}
+	chartNS.data = {num_contributors : [], ip : [], fpu : [], civpol : [], eom : [], troops : [], all : []}
 
 
-	var url = 'http://localhost:8080/ppp_api/aggregates';
+	var url = 'http://localhost:8080/ppp_api';
+	// var url = 'http://ec2-54-208-218-182.compute-1.amazonaws.com:8080/ppp_api/aggregates';
 	var eom = url + '/eom';
 	var police = url + '/police';
 	var troops = url + '/troops';
 	var allCont = url + '/all';
+	var aggregates = url + '/aggregates';
 
 	///// Utility funciotns
 	//gets data from dataIn object array and pushes to dataOut array
-	function getData(dataIn, dataOut) {
+	function fetchData(dataIn, dataOut) {
 		for (var i = 0; i < dataIn.length; i++) {
 			var year = dataIn[i]['date'].slice(0, 4);
 			var month = dataIn[i]['date'].slice(5, 7);
@@ -26,59 +28,75 @@ $(document).ready(function () {
 		};
 		return dataOut;
 	}
+// var urls = ['/url/one','/url/two', ....];
 
+// $.each(urls, function(i,u){ 
+//      $.ajax(u, 
+//        { type: 'POST',
+//          data: {
+//             answer_service: answer,
+//             expertise_service: expertise,
+//             email_service: email,
+//          },
+//          success: function (data) {
+//              $(".error_msg").text(data);
+//          } 
+//        }
+//      );
+// });
 	$.ajax({
-		url: url,
+		url: aggregates,
 		cache: false,
 		// dataType: 'json',
 		dataType: 'jsonp',
-		context: localhost,
+		context: chartNS,
 		success: function(outputfromserver) {
 
-			getData(outputfromserver[0].values, this.data.num_contributors);
+			fetchData(outputfromserver[0].values, this.data.num_contributors);
 
 			maxDate = new Date(Math.max.apply(null,this.dateArray));
 			minDate = new Date(Math.min.apply(null,this.dateArray));
-			localhost.chart.xAxisMax = maxDate.getFullYear();
-			localhost.chart.xAxisMin = minDate.getFullYear();
+			chartNS.chart.xAxisMax = maxDate.getFullYear();
+			chartNS.chart.xAxisMin = minDate.getFullYear();
 
 			// parse in data from api
 			for (var i = 0; i < outputfromserver.length; i++) {
 				switch(outputfromserver[i].cont_type) {
 					case 'num_contributors':
-						getData(outputfromserver[i].values, this.data.num_contributors);
+						fetchData(outputfromserver[i].values, this.data.num_contributors);
 						break;
 					case 'ip':
-						getData(outputfromserver[i].values, this.data.ip);
+						fetchData(outputfromserver[i].values, this.data.ip);
 						break;
 					case 'fpu':
-						getData(outputfromserver[i].values, this.data.fpu);
+						fetchData(outputfromserver[i].values, this.data.fpu);
 						break;
 					case 'civpol':
-						getData(outputfromserver[i].values, this.data.civpol);
+						fetchData(outputfromserver[i].values, this.data.civpol);
 						break;
 					case 'eom':
-						getData(outputfromserver[i].values, this.data.eom);
+						fetchData(outputfromserver[i].values, this.data.eom);
 						break;
 					case 'troops':
-						getData(outputfromserver[i].values, this.data.troops);
+						fetchData(outputfromserver[i].values, this.data.troops);
 						break;
 					case 'all':
-						getData(outputfromserver[i].values, this.data.all);
+						fetchData(outputfromserver[i].values, this.data.all);
 						break;
 					default:
 						console.log('key not found');
 				}
 			};
 
-			this.chart.data.series.push({name : 'Troops', data : this.data.troops});
+			this.chart.data.series.push({name : 'Troops', data : this.data.troops, drilldown: 'troops'});
 			this.chart.data.series.push({name : 'Experts on mission', data : this.data.eom});
 			this.chart.data.series.push({name : 'Police', data : this.data.civpol});
 			chart = new Highcharts.Chart(this.chart.data);
+	console.log(this.chart.data.series);
 		}
 	});	
 
-	localhost.chart.data = {
+	chartNS.chart.data = {
 		chart: {
 			renderTo: 'chart',
 			type: 'area'
@@ -97,7 +115,7 @@ $(document).ready(function () {
                 year: '%Y'
             },
             title: {
-                text: 'Date'
+                text: 'Year'
             }
         },
 		yAxis: {
